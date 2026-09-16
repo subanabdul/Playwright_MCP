@@ -29,9 +29,12 @@ on:
     id-token: write
 
 jobs:
-  test:
+  playwright:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -67,20 +70,13 @@ jobs:
       uses: actions/upload-pages-artifact@v3
       with:
         path: playwright-report/
-    - name: Fail workflow when tests fail
-      if: ${{ steps.playwright.outcome == 'failure' }}
-      run: exit 1
-
-  deploy-report:
-    if: ${{ always() }}
-    needs: test
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
     - name: Deploy report to GitHub Pages
+      if: ${{ !cancelled() }}
       id: deployment
       uses: actions/deploy-pages@v4
     - name: Add report link to workflow summary
+      if: ${{ !cancelled() }}
       run: echo "Playwright HTML report: ${{ steps.deployment.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"
+    - name: Fail workflow when tests fail
+      if: ${{ steps.playwright.outcome == 'failure' }}
+      run: exit 1
